@@ -21,23 +21,19 @@ from .models import *
 @login_required(login_url='/admin/login/')
 def init_category(request):
     ALL_CATEGORIES = {
-        '/b/Appliances/N-5yc1vZbv1w': 'Appliances',
-        '/b/Bath/N-5yc1vZbzb3': 'Bath & Faucets',
-        '/b/Decor/N-5yc1vZas6p': 'Blinds & Decor',
-        '/b/Building-Materials/N-5yc1vZaqns': 'Building Materials',
-        '/b/Doors-Windows/N-5yc1vZaqih': 'Doors & Windows',
-        '/b/Electrical/N-5yc1vZarcd': 'Electrical',
-        '/b/Flooring/N-5yc1vZaq7r': 'Flooring & Area Rugs',
-        '/b/Tools-Hardware-Hardware/N-5yc1vZc21m': 'Hardware',
-        '/b/Heating-Venting-Cooling/N-5yc1vZc4k8': 'Heating & Cooling',
-        '/b/Kitchen/N-5yc1vZar4i': 'Kitchen',
-        '/b/Outdoors-Garden-Center/N-5yc1vZbx6k': 'Lawn & Garden',
-        '/b/Lighting-Ceiling-Fans/N-5yc1vZbvn5': 'Lighting & Ceiling Fans',
-        '/b/Outdoors/N-5yc1vZbx82': 'Outdoor Living',
-        '/b/Paint/N-5yc1vZar2d': 'Paint',
-        '/b/Plumbing/N-5yc1vZbqew': 'Plumbing',
-        '/b/Storage-Organization/N-5yc1vZas7e': 'Storage & Organization',
-        '/b/Tools-Hardware/N-5yc1vZc1xy': 'Tools'
+        '/Home-Garden/1/store.html': 'Home Goods',
+        '/Electronics/2/store.html': 'Electronics Store',
+        '/Jewelry-Watches/4/store.html': 'Jewelry & Watch Store',
+        '/Sports-Toys/5/store.html': 'Sports & Outdoors Store',
+        '/Worldstock-Fair-Trade/6/store.html': 'Worldstock Fair Trade',
+        '/Clothing-Shoes/7/store.html': 'Clothing & Shoe Store',
+        '/Health-Beauty/8/store.html': 'Health & Beauty Store',
+        '/Office-Supplies/22/store.html': 'Office Supplies',
+        '/Luggage-Bags/33/store.html': 'Luggage & Bag Store',
+        '/Crafts-Sewing/34/store.html': 'Sewing & Craft Store',
+        '/Pet-Supplies/37/store.html': 'Pet Supply Store',
+        '/Emergency-Preparedness/42/store.html': 'Emergency Preparedness',
+        '/Bedding-Bath/43/store.html': 'Bedding & Bath Store'
     }
 
     create_category(None, '/', 'All')
