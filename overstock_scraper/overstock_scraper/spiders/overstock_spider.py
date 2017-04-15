@@ -41,8 +41,8 @@ class OverstockSpider(scrapy.Spider):
         if self.task.mode == 1:
             cate_requests = []
             for item in self.categories:
-                request = scrapy.Request('http://www.overstock.com'+item,
-                                         callback=self.parse)
+                request = scrapy.Request('https://www.overstock.com'+item,
+                                          callback=self.parse)
                 request.meta['category'] = item
                 # request.meta['proxy'] = 'http://'+random.choice(self.proxy_pool)
                 cate_requests.append(request)
@@ -59,59 +59,52 @@ class OverstockSpider(scrapy.Spider):
 
     def closed(self, reason):
         self.update_run_time()
-        self.store_report()
+        # self.store_report()
 
     def parse(self, response):
         if self.stop_scrapy():
             return
 
-        products = response.css('div.pod-plp__container div.pod-inner')
-        cates_url = response.css('ul.activeLevel li a::attr(href)').extract() or \
-                      response.css('ul.list li.list__item--padding-none a::attr(href)').extract()        
-        cates_title = response.css('ul.activeLevel li a::text').extract() or \
-                        response.css('ul.list li.list__item--padding-none a::text').extract()
- 
-        if products:
-            for product in products:
-                detail = product.css('div.plp-pod__image a::attr(href)').extract_first()                
-                detail = 'http://www.overstock.com'+detail
-                if not detail in self.excludes:
-                    category = response.url.split('http://www.overstock.com')[1]
-                    request = scrapy.Request(detail, callback=self.detail)
-                    request.meta['category'] = category
-                    yield request
+        products = response.css('div.products div.product-wrapper').extract()
+        cates_url = response.css('div.categories ul.refinements li a::attr(href)').extract()
+        cates_title = response.css('div.categories ul.refinements li a span::text').extract() or []
+        cates_title = [item for item in cates_title if item.strip()]
 
-            # for other pages / pagination
-            offset = response.meta.get('offset', 0)
-            total_records = response.meta.get('total_records', self.get_total_records(response))
-            
-            if offset + 24 < total_records:
-                offset += 24
-                base_url = response.url.split('?')[0]
-                next_url = base_url+'?Nao={}'.format(offset)
-                request = scrapy.Request(next_url, callback=self.parse)
-                request.meta['offset'] = offset
-                request.meta['total_records'] = total_records
-                yield request
-
-        elif cates_url:
+        if cates_url:
             parent = response.meta['category']
             for item in zip(cates_url, cates_title):
-                url = item[0].split('?')[0]
-                if self.is_category(url):
-                    cate_ = '/{}/'.format(url.split('/')[2])
-                    if not Category.objects.filter(url__contains=cate_):
-                        Category.objects.create(parent_id=parent, url=url, title=item[1])
+                url = item[0].split('?')[0].split('//www.overstock.com')[-1]
+                if not Category.objects.filter(url=url):
+                    Category.objects.create(parent_id=parent, url=url, title=item[1])
 
-                        request = scrapy.Request('http://www.overstock.com'+url, callback=self.parse)
-                        request.meta['category'] = url
-                        # request.meta['proxy'] = 'http://'+random.choice(self.proxy_pool)
-                        yield request
+                    request = scrapy.Request('https://www.overstock.com'+url, callback=self.parse)
+                    request.meta['category'] = url
+                    # request.meta['proxy'] = 'http://'+random.choice(self.proxy_pool)
+                    yield request
+        elif products:
+            pass
+            # for product in products:
+            #     detail = product.css('div.plp-pod__image a::attr(href)').extract_first()                
+            #     detail = 'http://www.overstock.com'+detail
+            #     if not detail in self.excludes:
+            #         category = response.url.split('http://www.overstock.com')[1]
+            #         request = scrapy.Request(detail, callback=self.detail)
+            #         request.meta['category'] = category
+            #         yield request
 
-    def is_category(self, cate_str):
-        if not cate_str.startswith('/b/'):
-            return False        
-        return cate_str.count("/")
+            # # for other pages / pagination
+            # offset = response.meta.get('offset', 0)
+            # total_records = response.meta.get('total_records', self.get_total_records(response))
+            
+            # if offset + 24 < total_records:
+            #     offset += 24
+            #     base_url = response.url.split('?')[0]
+            #     next_url = base_url+'?Nao={}'.format(offset)
+            #     request = scrapy.Request(next_url, callback=self.parse)
+            #     request.meta['offset'] = offset
+            #     request.meta['total_records'] = total_records
+            #     yield request
+
 
     def get_total_records(self, response):
         total_records = response.css('div[id=allProdCount]::text').extract_first()
