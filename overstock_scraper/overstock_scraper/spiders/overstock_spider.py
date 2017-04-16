@@ -92,23 +92,24 @@ class OverstockSpider(scrapy.Spider):
             #         request.meta['category'] = category
             #         yield request
 
-            # # for other pages / pagination
-            # offset = response.meta.get('offset', 0)
-            # total_records = response.meta.get('total_records', self.get_total_records(response))
+            # for other pages / pagination
+            offset = response.meta.get('offset', 1)
+            total_records = response.meta.get('total_records', self.get_total_records(response))
             
-            # if offset + 24 < total_records:
-            #     offset += 24
-            #     base_url = response.url.split('?')[0]
-            #     next_url = base_url+'?Nao={}'.format(offset)
-            #     request = scrapy.Request(next_url, callback=self.parse)
-            #     request.meta['offset'] = offset
-            #     request.meta['total_records'] = total_records
-            #     yield request
+            if offset + 60 < total_records:
+                offset += 60
+                base_url = response.url.split('?')[0]
+                next_url = base_url+'?index={}'.format(offset)
+                request = scrapy.Request(next_url, callback=self.parse)
+                request.meta['offset'] = offset
+                request.meta['total_records'] = total_records
+                yield request
 
 
     def get_total_records(self, response):
-        total_records = response.css('div[id=allProdCount]::text').extract_first()
-        return int(total_records.replace(',', ''))
+        total_records = response.css('div.breadcrumb-wrapper span.result-count::text').extract_first()
+        total_records = re.search(r'\sof ([\d,]+?) Results\s*', total_records)
+        return int(total_records.group(1).replace(',', ''))
 
     def get_url_id(self, url):
         return url
