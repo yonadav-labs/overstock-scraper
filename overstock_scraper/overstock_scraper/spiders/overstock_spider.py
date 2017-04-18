@@ -114,10 +114,17 @@ class OverstockSpider(scrapy.Spider):
 
     def detail(self, response):
         pid = int(response.css('div.item-number::text').extract_first().strip()[6:])
-        quantity = 999 # self.get_real_quantity(pid)
+        try:
+            quantity = response.css('select.add-quantity option::text').extract()[-1].replace('Quantity: ', '')
+        except Exception, e:
+            if response.css('div.out-of-stock-label'):
+                quantity = 0
+            else:
+                quantity = 9999
         
         brand = response.css('span[id=brand-name] a::text').extract_first() or ''
-
+        discount = response.css('span[auto-test=savings-price]::text').extract_first() or ''
+        shipping = response.css('div.free-shipping-message::text').extract_first() or ''
         price = response.css('span.monetary-price-value::text').extract_first()
 
         try:
@@ -136,7 +143,7 @@ class OverstockSpider(scrapy.Spider):
             'picture': response.css("div.hero img::attr(src)").extract_first(),
             'rating': response.css('div.ratings-container span.stars::attr(data-rating)').extract_first() or 0,
             'review_count': review_count,
-            'promo': response.css('div.row pricing-section span[auto-test=savings-price]::text').extract_first(),
+            'promo': discount+shipping,
             'category_id': response.meta['category'],
             'delivery_time': 'Zip Code specific',
             'bullet_points': '\n'.join(response.css('span[itemprop=description] li::text').extract()),
