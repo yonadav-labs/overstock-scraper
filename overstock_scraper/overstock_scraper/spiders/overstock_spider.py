@@ -115,10 +115,12 @@ class OverstockSpider(scrapy.Spider):
     def detail(self, response):
         pid = int(response.css('div.item-number::text').extract_first().strip()[6:])
         try:
+            min_quantity = 1
             quantity = response.css('select.add-quantity option::text').extract()[-1].replace('Quantity: ', '')
         except Exception, e:
             if response.css('div.out-of-stock-label'):
                 quantity = 0
+                min_quantity = 0
             else:
                 quantity = 9999
         
@@ -149,7 +151,7 @@ class OverstockSpider(scrapy.Spider):
             'bullet_points': '\n'.join(response.css('span[itemprop=description] li::text').extract()),
             'details': details,
             'quantity': quantity,
-            'min_quantity': 1,
+            'min_quantity': min_quantity,
             'special': 'Brand: '+brand,
             'url': self.get_url_id(response.url)
         }        
