@@ -101,6 +101,6 @@ class ScrapyTask(models.Model):
     def run_scraper(self):
         path = settings.BASE_DIR + '/overstock_scraper/celery_crawler.py'
         subprocess.Popen(["python", 
-                          path, 
-                          str(self.pk)])
+                           path, 
+                           str(self.pk)])
 

@@ -52,7 +52,6 @@ class OverstockSpider(scrapy.Spider):
             for product in self.products:
                 request = scrapy.Request(product.url, 
                                          callback=self.detail)
-                request.meta['model_num'] = product.special
                 request.meta['category'] = product.category_id
                 product_requests.append(request)
             return product_requests    
@@ -65,7 +64,7 @@ class OverstockSpider(scrapy.Spider):
         if self.stop_scrapy():
             return
 
-        products = response.css('div.products div.product-wrapper').extract()
+        products = response.css('div.products div.product-wrapper')
         cates_url = response.css('div.categories ul.refinements li a::attr(href)').extract()
         cates_title = response.css('div.categories ul.refinements li a span::text').extract() or []
         cates_title = [item for item in cates_title if item.strip()]
@@ -82,15 +81,14 @@ class OverstockSpider(scrapy.Spider):
                     # request.meta['proxy'] = 'http://'+random.choice(self.proxy_pool)
                     yield request
         elif products:
-            pass
-            # for product in products:
-            #     detail = product.css('div.plp-pod__image a::attr(href)').extract_first()                
-            #     detail = 'http://www.overstock.com'+detail
-            #     if not detail in self.excludes:
-            #         category = response.url.split('http://www.overstock.com')[1]
-            #         request = scrapy.Request(detail, callback=self.detail)
-            #         request.meta['category'] = category
-            #         yield request
+            for product in products:
+                detail = product.css('div.product-info a::attr(href)').extract_first()
+                detail = detail.split('?')[0]
+                if not detail in self.excludes:
+                    category = response.url.split('?')[0][25:]
+                    request = scrapy.Request(detail, callback=self.detail)
+                    request.meta['category'] = category
+                    yield request
 
             # for other pages / pagination
             offset = response.meta.get('offset', 1)
@@ -112,43 +110,47 @@ class OverstockSpider(scrapy.Spider):
         return int(total_records.group(1).replace(',', ''))
 
     def get_url_id(self, url):
-        return url
+        return url.split('?')[0]
 
     def detail(self, response):
-        pid = response.css('span[id=product_internet_number]::text').extract_first()
-        quantity = self.get_real_quantity(pid)
+        pid = int(response.css('div.item-number::text').extract_first().strip()[6:])
+        quantity = 999 # self.get_real_quantity(pid)
         
-        special = response.css('h2.modelNo::text').extract_first().replace('\n', '').strip()
-        brand = response.css('h2.product-title__brand::text').extract_first() or ''
-        brand = re.sub(r'\s+', ' ', brand).strip()
+        brand = response.css('span[id=brand-name] a::text').extract_first() or ''
 
-        price = response.css('input[id=ciItemPrice]::attr(value)').extract_first()
-        if price:
-            price = '$' + price
-        else:
-            price = ''
+        price = response.css('span.monetary-price-value::text').extract_first()
+
+        try:
+            review_count = response.css('div.ratings-container span.count::text').extract_first() 
+            review_count = int(review_count.replace(' Reviews', ''))
+        except Exception, e:
+             review_count = 0
+
+        details = response.css('section[id=more] table')[2]
+        details = self.get_details(details.css('tr td::text').extract())
 
         item = {
             'id': pid,
-            'title': response.css('h1.product-title__title::text').extract_first(),
+            'title': response.css('div.product-title h1::text').extract_first(),
             'price': price,
-            'picture': response.xpath("//img[@id='mainImage']/@src").extract_first(),
-            'rating': response.css('span[itemprop=ratingValue]::text').extract_first() or 0,
-            'review_count': response.css('span[itemprop=reviewCount]::text').extract_first() or 0,
-            'promo': response.css('div.product_promo_ctn a span::text').extract_first(),
-            'category_id': response.meta['category'].split('?')[0],
-            'delivery_time': '',
-            'bullet_points': '\n'.join(response.css('div.buybox li::text').extract()),
-            'details': 'Brand: '+brand,
+            'picture': response.css("div.hero img::attr(src)").extract_first(),
+            'rating': response.css('div.ratings-container span.stars::attr(data-rating)').extract_first() or 0,
+            'review_count': review_count,
+            'promo': response.css('div.row pricing-section span[auto-test=savings-price]::text').extract_first(),
+            'category_id': response.meta['category'],
+            'delivery_time': 'Zip Code specific',
+            'bullet_points': '\n'.join(response.css('span[itemprop=description] li::text').extract()),
+            'details': details,
             'quantity': quantity,
             'min_quantity': 1,
-            'special': special,
+            'special': 'Brand: '+brand,
             'url': self.get_url_id(response.url)
         }        
 
         try:
             Product.objects.update_or_create(id=item['id'], defaults=item)
         except Exception, e:
+            print str(e), '@@@@@@@@@@@@@@@@'
             pass
 
         yield item        
@@ -184,6 +186,12 @@ class OverstockSpider(scrapy.Spider):
             print '=============== 2 ==============',str(e)
             return '9999'
         return quantity
+
+    def get_details(self, list_str):
+        if len(list_str) < 2:
+            return ''
+        result = [list_str[idx]+': '+list_str[idx+1] for idx in range(0, len(list_str), 2)]
+        return '\n'.join(result)
 
     def update_run_time(self):
         self.task.last_run = datetime.datetime.now()
