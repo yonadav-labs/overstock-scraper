@@ -18,7 +18,7 @@
 	nohup python manage.py runserver 0.0.0.0:80 < /dev/null &
 
 #### Edit crontab entry
-	* * * * * python /root/Product-Scraper/cron_task.py
+	* * * * * python /root/paultitov-overstock/cron_task.py
 
 #### Create an export directory    
     mkdir /home/exports
